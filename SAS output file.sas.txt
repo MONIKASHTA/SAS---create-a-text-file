@@ -1,0 +1,48 @@
+*************************************************
+Program: export_xyz_email_output.sas
+Purpose: Export user_bpc.xyz_email_output table to text file
+*************************************************/
+
+/* Step 1: Connect to Teradata and extract data */
+%libkrb5(wrk,rchtera,user_bpc);
+
+proc sql;
+  %krb5(rchtera);
+  
+  /* Create SAS dataset from Teradata table with joins */
+  create table work.email_output_extract as
+  select * from connection to teradata
+    (select 
+       a.*,
+       b.additional_column1,
+       c.additional_column2
+     from user_bpc.xyz_email_output a
+     left join your_schema.table2 b
+       on a.join_key = b.join_key
+     left join your_schema.table3 c  
+       on a.another_key = c.another_key
+     /* Add WHERE clause if needed */
+     where a.some_condition = 'value'
+    );
+  
+  disconnect from teradata;
+quit;
+
+/* Step 2: Export to pipe-delimited text file */
+proc export data=work.email_output_extract
+  outfile="/your/desired/path/xyz_email_output_export.txt"
+  dbms=dlm replace;
+  delimiter='|';
+  putnames=yes;  /* Include column headers */
+run;
+
+/* Step 3: Create the .end file */
+data _null_;
+  file "/your/desired/path/xyz_email_output_export.end";
+  put " ";
+run;
+
+/* Clean up */
+libname wrk clear;
+
+endsas;
